@@ -1,0 +1,82 @@
+port: 7890
+socks-port: 7891
+allow-lan: false
+mode: Rule
+log-level: info
+external-controller: 127.0.0.1:9090
+
+# 代理节点 (示例配置，需替换为你的实际服务器信息)
+proxies:
+  # Shadowsocks 示例
+  - name: "SS-美国节点"
+    type: ss
+    server: us.example.com
+    port: 443
+    cipher: aes-256-gcm
+    password: "your_password"
+    udp: true
+
+  # Trojan 示例
+  - name: "Trojan-日本节点"
+    type: trojan
+    server: jp.example.com
+    port: 443
+    password: "your_password"
+    sni: "example.com"
+    skip-cert-verify: false
+
+  # VMess 示例
+  - name: "VMess-新加坡节点"
+    type: vmess
+    server: sg.example.com
+    port: 443
+    uuid: "your_uuid"
+    alterId: 0
+    cipher: auto
+    tls: true
+    skip-cert-verify: false
+
+# 策略组 (自动选择/故障转移/手动切换)
+proxy-groups:
+  - name: "🚀 自动选择"
+    type: url-test
+    proxies: ["SS-美国节点", "Trojan-日本节点", "VMess-新加坡节点"]
+    url: "http://www.gstatic.com/generate_204"
+    interval: 300
+
+  - name: "🔀 故障转移"
+    type: fallback
+    proxies: ["SS-美国节点", "Trojan-日本节点"]
+    url: "http://www.gstatic.com/generate_204"
+    interval: 300
+
+  - name: "🎯 手动切换"
+    type: select
+    proxies: ["SS-美国节点", "Trojan-日本节点", "VMess-新加坡节点", "DIRECT"]
+
+  - name: "📺 奈飞专用"
+    type: select
+    proxies: ["Trojan-日本节点", "VMess-新加坡节点"]
+
+# 规则集 (支持远程规则)
+rule-providers:
+  reject:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/reject.yaml
+    interval: 86400
+
+  streaming:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/streaming.txt"
+    path: ./ruleset/streaming.yaml
+    interval: 86400
+
+# 规则优先级：从上到下匹配
+rules:
+  - RULE-SET,reject,REJECT
+  - RULE-SET,streaming,📺 奈飞专用
+  - GEOIP,CN,DIRECT
+  - MATCH,🚀 自动选择
